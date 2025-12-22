@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from init_db import SessionLocal, CheckIn, Venue 
 from pydantic import BaseModel
 from .utils import calculate_midpoint
+from .maps import fetch_nearby_places
 
 app = FastAPI()
 
@@ -47,10 +48,30 @@ def get_my_history(user_id: str, db = Depends(get_db)):
     return history
 
 @app.post("/v1/calculate-meetup")
-def get_midpoint(request: MeetupRequest):
-    midpoint = calculate_midpoint(request.user_a_lat, request.user_a_lon, request.user_b_lat, request.user_b_lon)
-    return {"midpoint": midpoint, "suggestion": "Now we need to search Google Places around this point!"}
-    # next step: take the midpoint from this function
-    # send to google: find me all cafes within 2000m of these coordinates
-    # display those results
+def get_recommendations(request: MeetupRequest):
+    # 1. Calculate the center point
+    midpoint = calculate_midpoint(
+        request.user_a_lat, request.user_a_lon, 
+        request.user_b_lat, request.user_b_lon
+    )
     
+    # 2. Get real venues from Google
+    venues = fetch_nearby_places(
+        midpoint["latitude"], 
+        midpoint["longitude"]
+    )
+    
+    # 3. Clean up the data to return just what we need
+    recommendations = []
+    for place in venues[:5]: # Top 5 results
+        recommendations.append({
+            "name": place.get("name"),
+            "address": place.get("vicinity"),
+            "rating": place.get("rating"),
+            "location": place.get("geometry", {}).get("location")
+        })
+        
+    return {
+        "midpoint": midpoint,
+        "recommendations": recommendations
+    }
