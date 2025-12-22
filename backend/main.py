@@ -4,6 +4,7 @@ from init_db import SessionLocal, CheckIn, Venue
 from pydantic import BaseModel
 from .utils import calculate_midpoint
 from .maps import fetch_nearby_places
+from .recommender import score_and_rank_venues
 
 app = FastAPI()
 
@@ -48,30 +49,29 @@ def get_my_history(user_id: str, db = Depends(get_db)):
     return history
 
 @app.post("/v1/calculate-meetup")
-def get_recommendations(request: MeetupRequest):
-    # 1. Calculate the center point
+def get_recommendations(request: MeetupRequest, db: Session = Depends(get_db)):
+    # Step 1: Geometry math
     midpoint = calculate_midpoint(
         request.user_a_lat, request.user_a_lon, 
         request.user_b_lat, request.user_b_lon
     )
     
-    # 2. Get real venues from Google
-    venues = fetch_nearby_places(
+    # Step 2: Fetch raw data
+    raw_venues = fetch_nearby_places(
         midpoint["latitude"], 
         midpoint["longitude"]
     )
     
-    # 3. Clean up the data to return just what we need
-    recommendations = []
-    for place in venues[:5]: # Top 5 results
-        recommendations.append({
-            "name": place.get("name"),
-            "address": place.get("vicinity"),
-            "rating": place.get("rating"),
-            "location": place.get("geometry", {}).get("location")
-        })
-        
+    # Step 3: Run the AI Ranking Engine
+    # Note: Hardcoding user IDs for now; usually these come from Auth or the Request
+    ranked_recommendations = score_and_rank_venues(
+        google_results=raw_venues,
+        user_a_id="test_user_01", 
+        user_b_id="test_user_02",
+        db=db
+    )
+    
     return {
         "midpoint": midpoint,
-        "recommendations": recommendations
+        "recommendations": ranked_recommendations
     }
