@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from init_db import SessionLocal, CheckIn, Venue 
 from pydantic import BaseModel
+from .utils import calculate_midpoint
 
 app = FastAPI()
 
@@ -11,6 +12,11 @@ class CheckInCreate(BaseModel):
     venue_id: str
     venue_name: str
 
+class MeetupRequest(BaseModel):
+    user_a_lat: float
+    user_a_lon: float
+    user_b_lat: float
+    user_b_lon: float
 # --- Database Dependency ---
 def get_db():
     db = SessionLocal()
@@ -40,3 +46,11 @@ def get_my_history(user_id: str, db = Depends(get_db)):
     history = db.query(CheckIn).filter(CheckIn.user_id == user_id).all()
     return history
 
+@app.post("/v1/calculate-meetup")
+def get_midpoint(request: MeetupRequest):
+    midpoint = calculate_midpoint(request.user_a_lat, request.user_a_lon, request.user_b_lat, request.user_b_lon)
+    return {"midpoint": midpoint, "suggestion": "Now we need to search Google Places around this point!"}
+    # next step: take the midpoint from this function
+    # send to google: find me all cafes within 2000m of these coordinates
+    # display those results
+    
