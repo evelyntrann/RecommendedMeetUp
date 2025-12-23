@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from init_db import SessionLocal, CheckIn, Venue 
 from pydantic import BaseModel
 from utils import calculate_midpoint
-from maps import fetch_nearby_places
+from maps import fetch_nearby_places, get_coords_from_address
 from recommender import score_and_rank_venues
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -23,10 +23,9 @@ class CheckInCreate(BaseModel):
     venue_name: str
 
 class MeetupRequest(BaseModel):
-    user_a_lat: float
-    user_a_lon: float
-    user_b_lat: float
-    user_b_lon: float
+    user_a_address: str
+    user_b_address: str
+
 # --- Database Dependency ---
 def get_db():
     db = SessionLocal()
@@ -58,10 +57,23 @@ def get_my_history(user_id: str, db = Depends(get_db)):
 
 @app.post("/v1/calculate-meetup")
 def get_recommendations(request: MeetupRequest, db: Session = Depends(get_db)):
-    # Step 1: Geometry math
+    lat_a, lon_a = get_coords_from_address(request.user_a_address)
+    lat_b, lon_b = get_coords_from_address(request.user_b_address)
+
+    print("User A address:", request.user_a_address)
+    print("User A coords:", lat_a, lon_a)
+
+    print("User B address:", request.user_b_address)
+    print("User B coords:", lat_b, lon_b)
+
+    if lat_a is None or lat_b is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Could not find one or both addresses"
+        )
+
     midpoint = calculate_midpoint(
-        request.user_a_lat, request.user_a_lon, 
-        request.user_b_lat, request.user_b_lon
+        lat_a, lon_a, lat_b, lon_b
     )
     
     # Step 2: Fetch raw data
@@ -80,6 +92,8 @@ def get_recommendations(request: MeetupRequest, db: Session = Depends(get_db)):
     )
     
     return {
+        "user_a_coords": {"lat": lat_a, "lng": lon_a}, 
+        "user_b_coords": {"lat": lat_b, "lng": lon_b},
         "midpoint": midpoint,
         "recommendations": ranked_recommendations
     }

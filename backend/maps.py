@@ -28,3 +28,30 @@ def fetch_nearby_places(lat, lon, radius=2000, place_type="cafe"):
         print("Google error:", data["error_message"])
 
     return data.get("results", [])
+
+def get_coords_from_address(address: str):
+    url = "https://maps.googleapis.com/maps/api/geocode/json"
+    params = {
+        "address": address,
+        "key": GOOGLE_MAPS_API_KEY
+    }
+
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    print("===== GEOCODE DEBUG =====")
+    print("Address:", address)
+    print("HTTP status:", response.status_code)
+    print("Google status:", data.get("status"))
+    print("Error message:", data.get("error_message"))
+    print("========================")
+
+    if data.get("status") != "OK":
+        return None, None
+
+    location = data["results"][0]["geometry"]["location"]
+    return location["lat"], location["lng"]
+
+
+
+
