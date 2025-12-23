@@ -5,9 +5,17 @@ from pydantic import BaseModel
 from utils import calculate_midpoint
 from maps import fetch_nearby_places
 from recommender import score_and_rank_venues
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware, 
+    allow_origins=["*"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # --- Pydantic Models (Data validation for the API) ---
 class CheckInCreate(BaseModel):
     user_id: str
