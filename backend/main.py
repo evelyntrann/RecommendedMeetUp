@@ -2,9 +2,9 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from init_db import SessionLocal, CheckIn, Venue 
 from pydantic import BaseModel
-from .utils import calculate_midpoint
-from .maps import fetch_nearby_places
-from .recommender import score_and_rank_venues
+from utils import calculate_midpoint
+from maps import fetch_nearby_places
+from recommender import score_and_rank_venues
 
 app = FastAPI()
 

@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
-from .init_db import CheckIn
+from init_db import CheckIn
 
-def score_and_rank_venue(google_results, user_a_id, user_b_id, db: Session):
+def score_and_rank_venues(google_results, user_a_id, user_b_id, db: Session):
     scored_list = []
     for place in google_results:
         place_id = place.get("place_id")
@@ -21,7 +21,7 @@ def score_and_rank_venue(google_results, user_a_id, user_b_id, db: Session):
         if a_visits > 0 and b_visits > 0:
             boost += 3
             tags.append("Mututal favourite")
-# 3. Compile the record
+        # 3. Compile the record
         scored_list.append({
             "name": place.get("name"),
             "place_id": place_id,
@@ -31,5 +31,6 @@ def score_and_rank_venue(google_results, user_a_id, user_b_id, db: Session):
             "google_rating": base_score
         })
 
-        scored_list.sorted(key=lambda x: x["final_score"], reverse = True)
-        return scored_list
+    # Fixed: Sort outside the loop and use sorted() correctly
+    scored_list.sort(key=lambda x: x["final_score"], reverse=True)
+    return scored_list
